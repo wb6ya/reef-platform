@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
-  const rawListings = await getListingsAction();
+  const rawListings: any[] = await getListingsAction();
 
   const formattedListings: ListingCardProps[] = rawListings.map(l => ({
     id: l.id,
@@ -15,7 +15,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
     price: l.price,
     city: l.city,
     imageUrl: l.media[0]?.url || "https://images.unsplash.com/photo-1599839619722-39751411ea63?q=80&w=1000&auto=format&fit=crop",
-    isVerifiedSeller: l.seller.is_verified,
+    isVerifiedSeller: l.user.is_verified,
     lang
   }));
 

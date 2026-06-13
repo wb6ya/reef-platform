@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { createSession, destroySession } from "@/lib/auth";
+import { createSession, destroySession, getSessionUserId } from "@/lib/auth";
 
 export async function sendOtpAction(phone: string) {
   // Simulate sending OTP. For MVP, we just return success.

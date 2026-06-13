@@ -11,7 +11,7 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
   const listing = await prisma.listing.findUnique({
     where: { id },
     include: {
-      seller: true,
+      user: true,
       category: true,
       media: true
     }
@@ -20,7 +20,7 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
   if (!listing) notFound();
 
   const imageUrl = listing.media[0]?.url || "https://images.unsplash.com/photo-1599839619722-39751411ea63?q=80&w=1000&auto=format&fit=crop";
-  const dynamicAttrs = listing.dynamic_attributes as Record<string, any>;
+  const dynamicAttrs = listing.attributes as Record<string, any>;
 
   return (
     <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
@@ -74,18 +74,18 @@ export default async function ListingDetailsPage({ params }: { params: Promise<{
             <h2 className="text-lg font-bold mb-4">{lang === "ar" ? "معلومات البائع" : "Seller Info"}</h2>
             <div className="flex items-center gap-3 mb-6">
               <div className="h-12 w-12 bg-green-100 text-green-700 rounded-full flex items-center justify-center shrink-0 font-bold text-xl">
-                {listing.seller.name.charAt(0)}
+                {(listing as any).user.name.charAt(0)}
               </div>
               <div>
                 <p className="font-bold text-gray-900 flex items-center gap-1">
-                  {listing.seller.name}
-                  {listing.seller.is_verified && <ShieldCheck className="h-4 w-4 text-green-600" />}
+                  {(listing as any).user.name}
+                  {(listing as any).user.is_verified && <ShieldCheck className="h-4 w-4 text-green-600" />}
                 </p>
-                <p className="text-sm text-gray-500">{lang === "ar" ? "عضو منذ" : "Member since"} {new Date(listing.seller.created_at).getFullYear()}</p>
+                <p className="text-sm text-gray-500">{lang === "ar" ? "عضو منذ" : "Member since"} {new Date((listing as any).user.created_at).getFullYear()}</p>
               </div>
             </div>
 
-            <a href={`https://wa.me/${listing.seller.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer">
+            <a href={`https://wa.me/${(listing as any).user.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer">
               <Button variant="primary" className="w-full gap-2 text-lg h-14 bg-[#25D366] hover:bg-[#128C7E] focus-visible:ring-[#25D366] border-none">
                 <Phone className="h-5 w-5" />
                 {lang === "ar" ? "تواصل واتساب" : "Contact via WhatsApp"}

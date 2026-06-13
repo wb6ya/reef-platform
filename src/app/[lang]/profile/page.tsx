@@ -56,7 +56,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
           </div>
         </div>
 
-        <form action={logoutAction} className="mt-4 md:mt-0">
+        <form action={async () => { "use server"; await logoutAction(); }} className="mt-4 md:mt-0">
           <Button variant="outline" type="submit" className="gap-2">
             <LogOut className="h-4 w-4" />
             {lang === "ar" ? "تسجيل الخروج" : "Logout"}

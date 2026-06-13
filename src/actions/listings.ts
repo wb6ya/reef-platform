@@ -9,7 +9,7 @@ export async function createListingAction(data: {
   city: string;
   region: string;
   categoryId: string;
-  dynamic_attributes: any;
+  dynamic_attributes: Record<string, unknown>;
   imageUrl: string;
 }) {
   const userId = await getSessionUserId();
@@ -23,9 +23,9 @@ export async function createListingAction(data: {
         price: data.price,
         city: data.city,
         region: data.region,
-        categoryId: data.categoryId,
-        sellerId: userId,
-        dynamic_attributes: data.dynamic_attributes,
+        category_id: data.categoryId,
+        user_id: userId,
+        attributes: data.dynamic_attributes as any,
         status: "ACTIVE",
         media: {
           create: {
@@ -46,7 +46,7 @@ export async function getListingsAction() {
   return await prisma.listing.findMany({
     where: { status: "ACTIVE" },
     include: {
-      seller: { select: { is_verified: true } },
+      user: { select: { is_verified: true, name: true, phone: true, created_at: true } },
       media: { take: 1 }
     },
     orderBy: { created_at: 'desc' }
