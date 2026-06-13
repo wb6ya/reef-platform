@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  SELLER
+  ADMIN
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  ARCHIVED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+model User {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone            String    @unique
+  name             String
+  role             Role      @default(USER)
+  is_verified      Boolean   @default(false)
+  avatar_url       String?
+  created_at       DateTime  @default(now())
+
+  // Relations
+  listings         Listing[]
+  sent_messages    Message[] @relation("SentMessages")
+  received_messages Message[] @relation("ReceivedMessages")
+}
+
+model Category {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug      String     @unique
+  name_ar   String
+  name_en   String
+  parent_id String?    @db.Uuid
+  schema    Json
+
+  // Relations
+  parent    Category?  @relation("SubCategories", fields: [parent_id], references: [id])
+  children  Category[] @relation("SubCategories")
+  listings  Listing[]
+}
+
+model Listing {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String        @db.Uuid
+  category_id String        @db.Uuid
+  title       String
+  description String
+  price       Float?
+  city        String
+  region      String
+  status      ListingStatus @default(ACTIVE)
+  attributes  Json
+  created_at  DateTime      @default(now())
+
+  // Relations
+  user        User           @relation(fields: [user_id], references: [id])
+  category    Category       @relation(fields: [category_id], references: [id])
+  media       ListingMedia[]
+  messages    Message[]
+
+  @@index([city])
+}
+
+model ListingMedia {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listing_id String    @db.Uuid
+  url        String
+  type       MediaType
+  is_primary Boolean   @default(false)
+
+  // Relations
+  listing    Listing   @relation(fields: [listing_id], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sender_id   String   @db.Uuid
+  receiver_id String   @db.Uuid
+  listing_id  String   @db.Uuid
+  content     String
+  created_at  DateTime @default(now())
+
+  // Relations
+  sender      User     @relation("SentMessages", fields: [sender_id], references: [id])
+  receiver    User     @relation("ReceivedMessages", fields: [receiver_id], references: [id])
+  listing     Listing  @relation(fields: [listing_id], references: [id], onDelete: Cascade)
+}

@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌾 منصة ريف (Reef Platform)
 
-## Getting Started
+![Next.js](https://img.shields.io/badge/Next.js-14+-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?logo=tailwind-css)
+![Status](https://img.shields.io/badge/Status-In_Development-yellow)
 
-First, run the development server:
+## 📖 نظرة عامة (Overview)
+**منصة ريف** هي سوق إلكتروني (C2C / B2C) مخصص بالكامل لخدمة القطاع الريفي والزراعي والحيواني. المنصة مبنية بفكر مشابه لمنصة "حراج"، حيث تتيح للمزارعين والمربين عرض منتجاتهم (مواشي، طيور، شتلات، معدات زراعية، منتجات عضوية) والتواصل المباشر مع المشترين المحتملين.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+تم تصميم المنصة لتكون **بسيطة للغاية (Zero Learning Curve)** وتدعم التصفح من الجوال كأولوية قصوى (Mobile-First)، مع دعم أصيل للغة العربية (RTL) واللغة الإنجليزية.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ✨ المميزات الأساسية (Core Features)
+* **محرك إعلانات ديناميكي:** تتغير حقول الإعلان المطلوبة بناءً على القسم المختار (مثال: حقل "العمر" للمواشي، و"الحالة" للمعدات).
+* **فلترة جغرافية متقدمة:** بحث وتصفية الإعلانات بناءً على المدن والمناطق لتسهيل نقل المنتجات الزراعية.
+* **تواصل مزدوج:** نظام محادثات داخلي (Chat) بالإضافة إلى زر تواصل مباشر عبر WhatsApp.
+* **تصميم موجه للجوال:** واجهات سريعة وسهلة الاستخدام بأزرار كبيرة وتصفح بديهي ليناسب جميع فئات المستخدمين.
+* **نظام التوثيق والتقييم:** رفع مستوى الثقة من خلال تقييمات المشترين وتوثيق حسابات البائعين الرسميين.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🛠 التقنيات المستخدمة (Tech Stack)
+تم بناء المنصة باستخدام أحدث تقنيات الويب لضمان الأداء العالي والتوافق السهل مع محركات البحث (SEO):
+* **إطار العمل:** [Next.js (App Router)](https://nextjs.org/)
+* **اللغة:** [TypeScript](https://www.typescriptlang.org/)
+* **تصميم الواجهات:** [Tailwind CSS](https://tailwindcss.com/)
+* **إدارة الحالة (Client State):** [Zustand](https://zustand-demo.pmnd.rs/)
+* **قاعدة البيانات:** PostgreSQL (عبر Prisma أو Drizzle ORM)
+* **الأيقونات:** Lucide React
