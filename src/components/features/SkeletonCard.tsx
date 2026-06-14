@@ -1,25 +1,35 @@
-import * as React from "react";
+import React from "react";
 
-export const SkeletonCard: React.FC = () => {
+export function SkeletonCard() {
   return (
-    <div className="flex flex-col bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 animate-pulse">
+    <div className="flex flex-col bg-white rounded-2xl overflow-hidden border-2 border-gray-100 shadow-sm animate-pulse">
       {/* Image Skeleton */}
-      <div className="aspect-[4/3] w-full bg-gray-200"></div>
+      <div className="relative aspect-[4/3] w-full bg-gray-200" />
 
       {/* Content Skeleton */}
-      <div className="p-4 flex flex-col gap-3">
-        {/* Title Lines */}
-        <div className="space-y-2">
-          <div className="h-4 bg-gray-200 rounded w-full"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+      <div className="flex flex-col p-4 gap-4">
+        {/* Title & Price Skeleton */}
+        <div className="flex justify-between items-start gap-4">
+          <div className="h-6 bg-gray-200 rounded-md w-2/3" />
+          <div className="h-6 bg-gray-200 rounded-md w-1/4" />
         </div>
 
-        {/* Footer info */}
-        <div className="mt-4 flex items-center justify-between">
-          <div className="h-5 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+        {/* Meta Information Skeleton */}
+        <div className="flex flex-col gap-3 mt-auto pt-2">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gray-200 rounded-full" />
+            <div className="h-4 bg-gray-200 rounded-md w-1/3" />
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 w-1/2">
+              <div className="w-4 h-4 bg-gray-200 rounded-full" />
+              <div className="h-3 bg-gray-200 rounded-md w-1/2" />
+            </div>
+            <div className="h-6 bg-gray-200 rounded-full w-1/3" />
+          </div>
         </div>
       </div>
     </div>
   );
-};
+}

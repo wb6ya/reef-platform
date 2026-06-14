@@ -1,0 +1,23 @@
+{
+  "name": "Reef Platform",
+  "short_name": "Reef",
+  "description": "The Ultimate Mobile-First C2C Agricultural Marketplace",
+  "start_url": "/ar",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#15803d",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/window.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/window.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

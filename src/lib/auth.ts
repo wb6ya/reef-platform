@@ -1,47 +1,43 @@
+import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import crypto from "crypto";
 
-const SECRET = process.env.AUTH_SECRET || "fallback-secret-for-development-only";
+const secretKey = process.env.JWT_SECRET || "reef-super-secret-key-for-development-only";
+const encodedKey = new TextEncoder().encode(secretKey);
 
-function sign(payload: string): string {
-  const hmac = crypto.createHmac("sha256", SECRET);
-  hmac.update(payload);
-  return `${payload}.${hmac.digest("base64url")}`;
-}
+export async function createSession(userId: string, role: string) {
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days session
+  const session = await new SignJWT({ userId, role })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(encodedKey);
 
-function verify(token: string): string | null {
-  const parts = token.split(".");
-  if (parts.length !== 2) return null;
-  const [payload, signature] = parts;
-  const hmac = crypto.createHmac("sha256", SECRET);
-  hmac.update(payload);
-  const expectedSignature = hmac.digest("base64url");
-  if (crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
-    return payload;
-  }
-  return null;
-}
-
-export async function createSession(userId: string) {
-  const token = sign(userId);
   const cookieStore = await cookies();
-  cookieStore.set("auth_session", token, {
+  cookieStore.set("reef_session", session, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
+    expires: expiresAt,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30 days
   });
 }
 
-export async function getSessionUserId(): Promise<string | null> {
+export async function getSession() {
   const cookieStore = await cookies();
-  const token = cookieStore.get("auth_session")?.value;
-  if (!token) return null;
-  return verify(token);
+  const session = cookieStore.get("reef_session")?.value;
+  if (!session) return null;
+
+  try {
+    const { payload } = await jwtVerify(session, encodedKey, {
+      algorithms: ["HS256"],
+    });
+    return payload;
+  } catch (error) {
+    return null; // Token is expired or invalid
+  }
 }
 
-export async function destroySession() {
+export async function deleteSession() {
   const cookieStore = await cookies();
-  cookieStore.delete("auth_session");
+  cookieStore.delete("reef_session");
 }

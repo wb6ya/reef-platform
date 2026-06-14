@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -17,85 +18,148 @@ enum ListingStatus {
   ACTIVE
   SOLD
   ARCHIVED
+  BANNED
 }
 
-enum MediaType {
-  IMAGE
-  VIDEO
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ListingType {
+  FIXED_PRICE
+  NEGOTIABLE
 }
 
 model User {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  phone            String    @unique
-  name             String
-  role             Role      @default(USER)
-  is_verified      Boolean   @default(false)
-  avatar_url       String?
-  created_at       DateTime  @default(now())
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone                String             @unique
+  email                String?            @unique
+  password             String?
+  name                 String
+  role                 Role               @default(USER)
+  avatar_url           String?
+  
+  otpCode              String?
+  otpExpires           DateTime?
 
-  // Relations
-  listings         Listing[]
-  sent_messages    Message[] @relation("SentMessages")
-  received_messages Message[] @relation("ReceivedMessages")
+  national_id          String?            @unique
+  verification_status  VerificationStatus @default(UNVERIFIED)
+  verification_docs    Json?              
+
+  created_at           DateTime           @default(now())
+  updated_at           DateTime           @updatedAt
+
+  listings             Listing[]
+  buyer_threads        Thread[]           @relation("BuyerThreads")
+  seller_threads       Thread[]           @relation("SellerThreads")
+  sent_messages        Message[]          @relation("SentMessages")
+  favorites            Favorite[]
+  reviews_given        Review[]           @relation("Reviewer")
+  reviews_received     Review[]           @relation("Reviewee")
 }
 
 model Category {
-  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  slug      String     @unique
-  name_ar   String
-  name_en   String
-  parent_id String?    @db.Uuid
-  schema    Json
-
-  // Relations
-  parent    Category?  @relation("SubCategories", fields: [parent_id], references: [id])
-  children  Category[] @relation("SubCategories")
-  listings  Listing[]
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug        String     @unique
+  name_ar     String
+  name_en     String
+  parent_id   String?    @db.Uuid
+  schema      Json       
+  
+  parent      Category?  @relation("SubCategories", fields: [parent_id], references: [id])
+  children    Category[] @relation("SubCategories")
+  listings    Listing[]
 }
 
 model Listing {
-  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id     String        @db.Uuid
-  category_id String        @db.Uuid
-  title       String
-  description String
-  price       Float?
-  city        String
-  region      String
-  status      ListingStatus @default(ACTIVE)
-  attributes  Json
-  created_at  DateTime      @default(now())
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String        @db.Uuid
+  category_id      String        @db.Uuid
+  
+  title            String
+  description      String
+  city             String
+  region           String
+  
+  type             ListingType   @default(FIXED_PRICE)
+  price            Float?
+  
+  attributes       Json          
+  status           ListingStatus @default(ACTIVE)
+  
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
 
-  // Relations
-  user        User           @relation(fields: [user_id], references: [id])
-  category    Category       @relation(fields: [category_id], references: [id])
-  media       ListingMedia[]
-  messages    Message[]
+  user             User           @relation(fields: [user_id], references: [id])
+  category         Category       @relation(fields: [category_id], references: [id])
+  media            ListingMedia[]
+  threads          Thread[]
+  favorited_by     Favorite[]
 
   @@index([city])
+  @@index([category_id])
 }
 
 model ListingMedia {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  listing_id String    @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listing_id String   @db.Uuid
   url        String
-  type       MediaType
-  is_primary Boolean   @default(false)
+  type       String   
+  is_primary Boolean  @default(false)
 
-  // Relations
-  listing    Listing   @relation(fields: [listing_id], references: [id], onDelete: Cascade)
+  listing    Listing  @relation(fields: [listing_id], references: [id], onDelete: Cascade)
+}
+
+model Thread {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listing_id String   @db.Uuid
+  buyer_id   String   @db.Uuid
+  seller_id  String   @db.Uuid
+  updated_at DateTime @updatedAt
+  created_at DateTime @default(now())
+
+  listing    Listing  @relation(fields: [listing_id], references: [id])
+  buyer      User     @relation("BuyerThreads", fields: [buyer_id], references: [id])
+  seller     User     @relation("SellerThreads", fields: [seller_id], references: [id])
+  messages   Message[]
+
+  @@unique([listing_id, buyer_id, seller_id])
 }
 
 model Message {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  thread_id   String   @db.Uuid
   sender_id   String   @db.Uuid
-  receiver_id String   @db.Uuid
-  listing_id  String   @db.Uuid
   content     String
   created_at  DateTime @default(now())
 
-  // Relations
+  thread      Thread   @relation(fields: [thread_id], references: [id], onDelete: Cascade)
   sender      User     @relation("SentMessages", fields: [sender_id], references: [id])
-  receiver    User     @relation("ReceivedMessages", fields: [receiver_id], references: [id])
-  listing     Listing  @relation(fields: [listing_id], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reviewer_id String   @db.Uuid
+  reviewee_id String   @db.Uuid
+  rating      Int      
+  comment     String?
+  created_at  DateTime @default(now())
+
+  reviewer    User     @relation("Reviewer", fields: [reviewer_id], references: [id])
+  reviewee    User     @relation("Reviewee", fields: [reviewee_id], references: [id])
+}
+
+model Favorite {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  listing_id String   @db.Uuid
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  listing    Listing  @relation(fields: [listing_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, listing_id])
 }

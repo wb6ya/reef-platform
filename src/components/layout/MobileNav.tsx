@@ -1,51 +1,75 @@
 "use client";
 
-import * as React from "react";
+import React from "react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
-import { Home, Grid, PlusCircle, MessageSquare, User } from "lucide-react";
+import { usePathname, useParams } from "next/navigation";
+import { Home, Search, Plus, MessageCircle, User } from "lucide-react";
 import { cn } from "@/utils/cn";
 
-export const MobileNav = () => {
-  const params = useParams();
+export function MobileNav() {
   const pathname = usePathname();
-  const lang = (params.lang as string) || "ar";
+  const params = useParams();
+  const lang = (params.lang as "ar" | "en") || "ar";
 
   const navItems = [
-    { href: `/${lang}`, icon: Home, label: lang === "ar" ? "الرئيسية" : "Home" },
-    { href: `/${lang}/categories`, icon: Grid, label: lang === "ar" ? "الأقسام" : "Categories" },
-    { href: `/${lang}/listings/create`, icon: PlusCircle, label: lang === "ar" ? "أضف إعلان" : "Add", special: true },
-    { href: `/${lang}/chat`, icon: MessageSquare, label: lang === "ar" ? "الرسائل" : "Chats" },
-    { href: `/${lang}/profile`, icon: User, label: lang === "ar" ? "حسابي" : "Profile" },
+    { icon: Home, label: lang === "ar" ? "الرئيسية" : "Home", href: `/${lang}` },
+    { icon: Search, label: lang === "ar" ? "بحث" : "Search", href: `/${lang}/search` },
+    // Center CTA handled separately
+    { icon: MessageCircle, label: lang === "ar" ? "رسائل" : "Chats", href: `/${lang}/chat` },
+    { icon: User, label: lang === "ar" ? "حسابي" : "Profile", href: `/${lang}/profile` },
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 start-0 end-0 bg-white border-t border-gray-200 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50">
-      <ul className="flex items-center justify-between px-2 h-16">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== `/${lang}` && pathname.startsWith(item.href));
+    <nav className="md:hidden fixed bottom-0 start-0 end-0 z-50 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
+      <div className="flex items-center justify-around h-16 relative px-2">
+        {navItems.slice(0, 2).map((item) => {
+          const isActive = pathname === item.href;
           return (
-            <li key={item.href} className="flex-1">
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors min-h-[44px]",
-                  isActive ? "text-green-700" : "text-gray-500 hover:text-green-600"
-                )}
-              >
-                {item.special ? (
-                  <div className="bg-green-700 text-white p-2 rounded-full -mt-5 border-4 border-white shadow-sm">
-                    <item.icon className="h-6 w-6" />
-                  </div>
-                ) : (
-                  <item.icon className={cn("h-5 w-5", isActive && "fill-green-700/20")} />
-                )}
-                <span className="text-[10px] font-medium">{item.label}</span>
-              </Link>
-            </li>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center w-16 h-full gap-1 text-sm font-medium transition-colors",
+                isActive ? "text-green-700" : "text-gray-500 hover:text-gray-900"
+              )}
+            >
+              <item.icon className="w-7 h-7" />
+              <span className="text-xs font-bold">{item.label}</span>
+            </Link>
           );
         })}
-      </ul>
+
+        {/* Elevated Center CTA for Add Listing */}
+        <div className="relative -top-6">
+          <Link
+            href={`/${lang}/listings/create`}
+            className="flex flex-col items-center justify-center w-16 h-16 rounded-full bg-green-700 text-white shadow-lg border-4 border-white hover:bg-green-800 transition-transform hover:scale-105 active:scale-95"
+            aria-label={lang === "ar" ? "أضف إعلان" : "Add Listing"}
+          >
+            <Plus className="w-8 h-8" />
+          </Link>
+          <span className="absolute -bottom-5 start-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-bold text-green-800">
+            {lang === "ar" ? "أضف إعلان" : "Sell"}
+          </span>
+        </div>
+
+        {navItems.slice(2, 4).map((item) => {
+          const isActive = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center w-16 h-full gap-1 text-sm font-medium transition-colors",
+                isActive ? "text-green-700" : "text-gray-500 hover:text-gray-900"
+              )}
+            >
+              <item.icon className="w-7 h-7" />
+              <span className="text-xs font-bold">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
-};
+}

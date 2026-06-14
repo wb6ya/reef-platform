@@ -1,154 +1,291 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { getCategoriesAction } from "@/actions/categories";
-import { createListingAction } from "@/actions/listings";
-import { Button } from "@/components/common/Button";
+import React, { useState, useEffect, use } from "react";
+import { useRouter } from "next/navigation";
+import { createListing, getCategories } from "@/actions/listing";
+import { compressImage } from "@/utils/image";
 import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
-import { UploadCloud } from "lucide-react";
+import { Button } from "@/components/common/Button";
+import { UploadCloud, X } from "lucide-react";
+import { useForm, Controller } from "react-hook-form";
 
-export default function CreateListingWizard() {
+export default function CreateListingPage({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = use(params);
   const router = useRouter();
-  const params = useParams();
-  const lang = (params.lang as string) || "ar";
-
-  const [step, setStep] = useState(1);
+  
+  const { register, handleSubmit, control, watch, formState: { errors } } = useForm();
+  
   const [categories, setCategories] = useState<any[]>([]);
-  const [selectedCat, setSelectedCat] = useState<any | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  // Form State
-  const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({});
-  const [imageUrl, setImageUrl] = useState("");
-  const [details, setDetails] = useState({ title: "", description: "", price: "", city: "", region: "" });
-
+  const selectedCategoryId = watch("categoryId");
+  const listingType = watch("type");
+  
   useEffect(() => {
-    getCategoriesAction().then(setCategories);
+    getCategories().then(setCategories);
   }, []);
 
-  const handleNext = () => setStep(s => s + 1);
-  const handlePrev = () => setStep(s => s - 1);
+  const selectedCategory = categories.find(c => c.id === selectedCategoryId);
 
-  const handleSubmit = async () => {
-    setIsLoading(true);
-    const res = await createListingAction({
-      title: details.title,
-      description: details.description,
-      price: details.price ? Number(details.price) : null,
-      city: details.city,
-      region: details.region,
-      categoryId: selectedCat!.id,
-      dynamic_attributes: dynamicValues,
-      imageUrl: imageUrl || "https://images.unsplash.com/photo-1599839619722-39751411ea63?q=80&w=1000&auto=format&fit=crop"
-    });
-    setIsLoading(false);
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsCompressing(true);
+    const newImages = [...images];
+    
+    for (let i = 0; i < files.length; i++) {
+      if (newImages.length >= 5) break; 
+      try {
+        const compressedBase64 = await compressImage(files[i]);
+        newImages.push(compressedBase64);
+      } catch (err) {
+        console.error("Compression failed", err);
+      }
+    }
+    
+    setImages(newImages);
+    setIsCompressing(false);
+  };
+
+  const onSubmit = async (data: any) => {
+    if (images.length === 0) {
+      setServerError(lang === "ar" ? "يجب إضافة صورة واحدة على الأقل" : "At least one image is required");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setServerError(null);
+
+    // Extract core fields vs dynamic attributes
+    const { title, description, city, region, type, price, categoryId, ...attributes } = data;
+
+    const payload = {
+      title,
+      description,
+      city,
+      region,
+      type: type || "FIXED_PRICE",
+      price: type === "NEGOTIABLE" ? null : parseFloat(price),
+      categoryId,
+      attributes,
+      imagesBase64: images,
+    };
+
+    const res = await createListing(payload);
+
     if (res.success) {
       router.push(`/${lang}`);
+      router.refresh();
     } else {
-      alert(res.error);
+      setServerError(res.error);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
-      <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100">
+    <div className="max-w-3xl mx-auto flex flex-col gap-8 pb-12">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          {lang === "ar" ? "أضف إعلان جديد" : "Add New Listing"}
+        </h1>
+        <p className="text-gray-500 font-medium">
+          {lang === "ar" 
+            ? "الرجاء تعبئة تفاصيل إعلانك بدقة لضمان أفضل تجربة للمشترين." 
+            : "Please fill out the details accurately to ensure the best experience for buyers."}
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-8">
         
-        {/* Progress tracker */}
-        <div className="flex items-center justify-between mb-8">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className={`flex-1 h-2 rounded-full mx-1 ${step >= i ? 'bg-green-700' : 'bg-gray-200'}`} />
-          ))}
+        {serverError && (
+          <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 font-bold shadow-sm">
+            {serverError}
+          </div>
+        )}
+
+        {/* Massive Touch Image Upload */}
+        <div className="flex flex-col gap-4">
+          <label className="font-bold text-gray-700">
+            {lang === "ar" ? "صور الإعلان (حد أقصى 5 صور)" : "Images (Max 5)"}
+          </label>
+          <div className="flex flex-wrap gap-4">
+            {images.map((base64, idx) => (
+              <div key={idx} className="relative w-32 h-32 rounded-2xl overflow-hidden border-2 border-gray-200 shadow-sm">
+                <img src={base64} alt="Upload preview" className="w-full h-full object-cover" />
+                <button 
+                  type="button"
+                  onClick={() => setImages(images.filter((_, i) => i !== idx))}
+                  className="absolute top-2 end-2 bg-white/80 p-1.5 rounded-full text-red-600 hover:bg-white shadow-sm transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ))}
+            
+            {images.length < 5 && (
+              <label className="w-32 h-32 rounded-2xl border-2 border-dashed border-green-700/50 bg-green-50 flex flex-col items-center justify-center text-green-700 cursor-pointer hover:bg-green-100 transition-colors shadow-sm">
+                <UploadCloud className="w-8 h-8 mb-2" />
+                <span className="text-sm font-bold">{isCompressing ? "..." : (lang === "ar" ? "إضافة" : "Add")}</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  multiple 
+                  className="hidden" 
+                  onChange={handleImageSelect}
+                  disabled={isCompressing}
+                />
+              </label>
+            )}
+          </div>
         </div>
 
-        {step === 1 && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h2 className="text-xl font-bold text-gray-900">{lang === "ar" ? "اختر القسم" : "Select Category"}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
-              {categories.map(cat => (
-                <div 
-                  key={cat.id} 
-                  onClick={() => { setSelectedCat(cat); handleNext(); }}
-                  className="border border-gray-200 rounded-xl p-6 cursor-pointer hover:border-green-700 hover:bg-green-50 hover:shadow-md transition-all text-center flex flex-col items-center justify-center gap-2"
-                >
-                  <p className="font-bold text-gray-900">{lang === "ar" ? cat.name_ar : cat.name_en}</p>
-                </div>
-              ))}
-            </div>
+        {/* Core Fields */}
+        <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 flex flex-col gap-6 transition-all">
+          <h2 className="text-xl font-bold text-gray-900 border-b border-gray-100 pb-4">
+            {lang === "ar" ? "المعلومات الأساسية" : "Basic Information"}
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <InputField 
+              label={lang === "ar" ? "عنوان الإعلان" : "Listing Title"} 
+              {...register("title", { required: true })} 
+              error={errors.title ? "مطلوب" : undefined}
+            />
+            
+            <Controller
+              name="categoryId"
+              control={control}
+              rules={{ required: true }}
+              defaultValue=""
+              render={({ field }) => (
+                <SelectField
+                  label={lang === "ar" ? "القسم (التصنيف)" : "Category"}
+                  options={categories.map(c => ({ value: c.id, label: lang === "ar" ? c.name_ar : c.name_en }))}
+                  value={field.value || ""}
+                  onChange={field.onChange}
+                  error={errors.categoryId ? "مطلوب" : undefined}
+                />
+              )}
+            />
           </div>
-        )}
 
-        {step === 2 && selectedCat && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h2 className="text-xl font-bold text-gray-900">{lang === "ar" ? "التفاصيل الإضافية" : "Additional Details"}</h2>
-            <div className="space-y-4">
-              {(selectedCat.schema as any[]).map((field: any) => (
-                field.type === "select" ? (
-                  <SelectField
-                    key={field.name}
-                    label={field.label}
-                    options={field.options.map((o: string) => ({ value: o, label: o }))}
-                    value={dynamicValues[field.name] || ""}
-                    onChange={e => setDynamicValues({...dynamicValues, [field.name]: e.target.value})}
-                    required={field.required}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Controller
+              name="type"
+              control={control}
+              rules={{ required: true }}
+              defaultValue="FIXED_PRICE"
+              render={({ field }) => (
+                <SelectField
+                  label={lang === "ar" ? "نوع السعر" : "Price Type"}
+                  options={[
+                    { value: "FIXED_PRICE", label: lang === "ar" ? "سعر ثابت" : "Fixed Price" },
+                    { value: "NEGOTIABLE", label: lang === "ar" ? "قابل للتفاوض (على السوم)" : "Negotiable" }
+                  ]}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+
+            {listingType !== "NEGOTIABLE" && (
+              <InputField 
+                label={lang === "ar" ? "السعر (ر.س)" : "Price (SAR)"} 
+                type="number" 
+                dir="ltr"
+                {...register("price", { required: listingType !== "NEGOTIABLE" })} 
+                error={errors.price ? "مطلوب" : undefined}
+              />
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <InputField 
+              label={lang === "ar" ? "المدينة" : "City"} 
+              {...register("city", { required: true })} 
+              error={errors.city ? "مطلوب" : undefined}
+            />
+            <InputField 
+              label={lang === "ar" ? "المنطقة" : "Region"} 
+              {...register("region", { required: true })} 
+              error={errors.region ? "مطلوب" : undefined}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="font-bold text-gray-700">{lang === "ar" ? "التفاصيل" : "Description"}</label>
+            <textarea 
+              {...register("description", { required: true })}
+              className="w-full bg-gray-50 border-2 border-gray-300 rounded-2xl px-4 py-3 text-lg font-medium focus:outline-none focus:border-green-700 focus:ring-2 focus:ring-green-700/20 transition-all min-h-[120px]"
+            />
+            {errors.description && <span className="text-red-500 text-sm font-bold">مطلوب</span>}
+          </div>
+        </div>
+
+        {/* Dynamic Schema Fields */}
+        {selectedCategory && (
+          <div className="bg-green-50 p-6 rounded-3xl shadow-sm border border-green-100 flex flex-col gap-6 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
+            <h2 className="text-xl font-bold text-green-900 border-b border-green-200 pb-4">
+              {lang === "ar" ? "المواصفات المخصصة" : "Specific Attributes"}
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {(selectedCategory.schema as any[]).map((field) => {
+                const isRequired = field.required;
+                const fieldLabel = lang === "ar" ? field.label_ar : field.label_en;
+                
+                if (field.type === "select") {
+                  return (
+                    <Controller
+                      key={field.id}
+                      name={field.id}
+                      control={control}
+                      rules={{ required: isRequired }}
+                      defaultValue=""
+                      render={({ field: controllerField }) => (
+                        <SelectField
+                          label={`${fieldLabel} ${!isRequired ? '(اختياري)' : ''}`}
+                          options={field.options_ar.map((opt: string, idx: number) => ({
+                            value: opt,
+                            label: lang === "ar" ? opt : field.options_en[idx]
+                          }))}
+                          value={controllerField.value || ""}
+                          onChange={controllerField.onChange}
+                          error={errors[field.id] ? "مطلوب" : undefined}
+                        />
+                      )}
+                    />
+                  );
+                }
+
+                return (
+                  <InputField 
+                    key={field.id}
+                    label={`${fieldLabel} ${!isRequired ? '(اختياري)' : ''}`} 
+                    type={field.type === "number" ? "number" : "text"} 
+                    dir={field.type === "number" ? "ltr" : undefined}
+                    {...register(field.id, { required: isRequired })} 
+                    error={errors[field.id] ? "مطلوب" : undefined}
                   />
-                ) : (
-                  <InputField
-                    key={field.name}
-                    label={field.label}
-                    type={field.type}
-                    value={dynamicValues[field.name] || ""}
-                    onChange={e => setDynamicValues({...dynamicValues, [field.name]: e.target.value})}
-                    required={field.required}
-                  />
-                )
-              ))}
-            </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={handlePrev} className="flex-1">{lang === "ar" ? "السابق" : "Back"}</Button>
-              <Button variant="primary" onClick={handleNext} className="flex-1">{lang === "ar" ? "التالي" : "Next"}</Button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {step === 3 && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h2 className="text-xl font-bold text-gray-900">{lang === "ar" ? "الصور المرفقة" : "Media Upload"}</h2>
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
-              <UploadCloud className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-700 font-medium mb-2">{lang === "ar" ? "اضغط لاختيار صورة (محاكاة)" : "Click to select image (mock)"}</p>
-              <p className="text-sm text-gray-400">Max 10MB (Client-side validated)</p>
-            </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={handlePrev} className="flex-1">{lang === "ar" ? "السابق" : "Back"}</Button>
-              <Button variant="primary" onClick={() => {
-                setImageUrl("https://images.unsplash.com/photo-1599839619722-39751411ea63?q=80&w=1000&auto=format&fit=crop");
-                handleNext();
-              }} className="flex-1">{lang === "ar" ? "التالي" : "Next"}</Button>
-            </div>
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h2 className="text-xl font-bold text-gray-900">{lang === "ar" ? "التفاصيل الأساسية" : "Basic Details"}</h2>
-            <div className="space-y-4">
-              <InputField label={lang === "ar" ? "عنوان الإعلان" : "Title"} value={details.title} onChange={e => setDetails({...details, title: e.target.value})} required />
-              <InputField label={lang === "ar" ? "السعر (اتركه فارغاً إذا كان على السوم)" : "Price"} type="number" value={details.price} onChange={e => setDetails({...details, price: e.target.value})} />
-              <div className="grid grid-cols-2 gap-4">
-                <InputField label={lang === "ar" ? "المنطقة" : "Region"} value={details.region} onChange={e => setDetails({...details, region: e.target.value})} required />
-                <InputField label={lang === "ar" ? "المدينة" : "City"} value={details.city} onChange={e => setDetails({...details, city: e.target.value})} required />
-              </div>
-            </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={handlePrev} disabled={isLoading} className="flex-1">{lang === "ar" ? "السابق" : "Back"}</Button>
-              <Button variant="primary" onClick={handleSubmit} isLoading={isLoading} className="flex-1">{lang === "ar" ? "نشر الإعلان" : "Publish Listing"}</Button>
-            </div>
-          </div>
-        )}
-
-      </div>
-    </main>
+        <Button type="submit" isLoading={isSubmitting} className="h-16 text-xl mt-4 shadow-lg shadow-green-700/20">
+          {lang === "ar" ? "نشر الإعلان" : "Publish Listing"}
+        </Button>
+      </form>
+    </div>
   );
 }
